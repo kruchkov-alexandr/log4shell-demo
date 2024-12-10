@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vulnerable-app-bad
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vulnerable-app
+  template:
+    metadata:
+      labels:
+        app: vulnerable-app
+    spec:
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      privileged: true
+      automountServiceAccountToken: true
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+      containers:
+      - name: vulnerable-app
+        image: log4shell-vulnerable:latest
+        imagePullPolicy: Never
+        securityContext:
+          privileged: true
+          allowPrivilegeEscalation: true
+          readOnlyRootFilesystem: false
+          runAsNonRoot: false
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        env:
+        - name: JAVA_OPTS
+          value: "-Dcom.sun.jndi.ldap.object.trustURLCodebase=true"
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - mountPath: /host
+          name: host-volume
+      volumes:
+      - name: host-volume
+        hostPath:
+          path: /
+          type: Directory
